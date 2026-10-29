@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR" class="home">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowmodoro · Visão geral</title>
+    <script type="module" src="/src/home.ts"></script>
+  </head>
+
+  <body class="home-body">
+    <header class="home-head" data-tauri-drag-region>
+      <div data-tauri-drag-region>
+        <p class="eyebrow" data-tauri-drag-region>Visão geral</p>
+        <h1 id="today" data-tauri-drag-region></h1>
+      </div>
+      <div class="row">
+        <button class="btn" type="button" data-act="sounds">Sons <span class="key" id="soundKeys"></span></button>
+        <button class="btn quiet" type="button" data-act="close">Fechar <span class="key">Esc</span></button>
+      </div>
+    </header>
+
+    <main class="home-grid">
+      <section class="panel now" id="now" aria-label="Agora"></section>
+
+      <section class="panel done" aria-labelledby="doneTitle">
+        <div class="panel-head">
+          <h2 id="doneTitle">Feito hoje</h2>
+          <div class="daynav">
+            <button class="btn icon" type="button" data-act="prevDay" aria-label="Dia anterior">‹</button>
+            <button class="btn icon" type="button" data-act="nextDay" id="nextDay" aria-label="Próximo dia">›</button>
+          </div>
+        </div>
+        <div class="stats" id="stats"></div>
+        <ul class="done-list" id="doneList"></ul>
+      </section>
+
+      <section class="panel plan" aria-labelledby="planTitle">
+        <div class="panel-head">
+          <h2 id="planTitle">Pra hoje <span class="opt">opcional</span></h2>
+          <span class="count" id="planCount"></span>
+        </div>
+        <input class="field sm" id="planInput" autocomplete="off" spellcheck="false" placeholder="Tem algo em mente? Anote e Enter" />
+        <ul class="plan-list" id="planList"></ul>
+      </section>
+
+      <details class="panel drawer" id="drawerPanel">
+        <summary><h2 id="drawerTitle">Gaveta</h2></summary>
+        <ul class="plan-list" id="drawerList"></ul>
+      </details>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protótipo Flowmodoro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a simulated computer screen (the app lives on top of other work) beside a narrow test panel; stacks on phones. */
+:root {
+  --bg: #EDF1F0;
+  --surface: #FFFFFF;
+  --ink: #18201F;
+  --muted: #5B6967;
+  --line: #D2DAD8;
+  --accent: #2B776F;
+  --flow: #A9780F;
+  --desk: #D9E1DF;
+  --app: #F7F9F8;
+  --app-ink: #7D8B88;
+  --bar-bg: #1C2524;
+  --bar-fg: #EEF3F1;
+  --bar-muted: #9AAAA7;
+  --bar-line: #33403E;
+  --bar-btn: #2A3533;
+  --bar-btn-hover: #364442;
+  --bar-accent: #5DBAB0;
+  --bar-flow: #E3B24C;
+  --shade: rgb(24 32 31 / .28);
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101615; --surface: #19211F; --ink: #E3EAE8; --muted: #93A29F; --line: #2B3634;
+    --accent: #5DBAB0; --flow: #E3B24C; --desk: #0B100F; --app: #151C1B; --app-ink: #5F6E6B;
+    --bar-bg: #26312F; --bar-fg: #EEF3F1; --bar-muted: #9AAAA7; --bar-line: #3A4846;
+    --bar-btn: #33403E; --bar-btn-hover: #405049; --bar-accent: #6FCBC0; --bar-flow: #E8BA58;
+    --shade: rgb(0 0 0 / .45);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101615; --surface: #19211F; --ink: #E3EAE8; --muted: #93A29F; --line: #2B3634;
+  --accent: #5DBAB0; --flow: #E3B24C; --desk: #0B100F; --app: #151C1B; --app-ink: #5F6E6B;
+  --bar-bg: #26312F; --bar-fg: #EEF3F1; --bar-muted: #9AAAA7; --bar-line: #3A4846;
+  --bar-btn: #33403E; --bar-btn-hover: #405049; --bar-accent: #6FCBC0; --bar-flow: #E8BA58;
+  --shade: rgb(0 0 0 / .45);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 48px;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: -.01em; margin: 0; }
+.tag { font-family: var(--f-mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; }
+.lede { color: var(--muted); margin: 0; flex-basis: 100%; max-width: 65ch; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- simulated screen ---------- */
+.screen {
+  position: relative; overflow: hidden; border-radius: 14px;
+  background: var(--desk); border: 1px solid var(--line);
+  height: min(72vh, 640px); min-height: 540px;
+}
+.appwin {
+  position: absolute; inset: 22px 22px 22px 22px; background: var(--app);
+  border-radius: 10px; border: 1px solid var(--line); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.appwin-top { display: flex; align-items: center; gap: 6px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.appwin-name { font-family: var(--f-mono); font-size: 12px; color: var(--app-ink); margin-left: 8px; }
+.grid { flex: 1; display: grid; grid-template-columns: 36px repeat(7, minmax(70px, 1fr)); grid-auto-rows: 28px; overflow: hidden; }
+.cell { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); font-family: var(--f-mono); font-size: 11.5px; color: var(--app-ink); padding: 5px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cell.h { text-align: center; opacity: .8; }
+
+.idle {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 16px;
+}
+.idle-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px 22px; max-width: 340px; display: grid; gap: 12px; text-align: center;
+  box-shadow: 0 8px 30px var(--shade);
+}
+.idle-card p { margin: 0; color: var(--muted); }
+.keys { display: flex; justify-content: center; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+kbd {
+  font-family: var(--f-mono); font-size: 13px; color: var(--ink);
+  border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 7px;
+  padding: 3px 9px; background: var(--bg);
+}
+.ghost { background: none; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; color: var(--ink); }
+.ghost:hover { border-color: var(--accent); }
+
+/* entry box */
+.entry { position: absolute; inset: 0; background: var(--shade); display: grid; place-items: center; padding: 16px; }
+.entry-card {
+  width: min(460px, 100%); background: var(--surface); border-radius: 16px; padding: 24px;
+  box-shadow: 0 20px 60px var(--shade); display: grid; gap: 14px;
+  animation: rise .22s ease-out;
+}
+.entry-card h2 { font-family: var(--f-display); font-weight: 700; font-size: 23px; line-height: 1.2; margin: 0; text-wrap: balance; }
+.entry-task { font-size: 13px; color: var(--muted); margin: 0; }
+.entry-task b { color: var(--ink); font-weight: 700; }
+.field {
+  width: 100%; border: 1px solid var(--line); border-radius: 10px; background: var(--bg);
+  padding: 12px 14px; font-size: 18px;
+}
+.field:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.field.sm { font-size: 15px; padding: 9px 12px; }
+.more { display: grid; gap: 8px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 700; justify-self: start; }
+.hint { font-size: 12.5px; color: var(--muted); margin: 0; }
+.shake { animation: shake .3s; }
+
+/* floating bar */
+.bar {
+  position: absolute; right: 22px; bottom: 22px; width: 350px;
+  background: var(--bar-bg); color: var(--bar-fg); border-radius: 14px;
+  box-shadow: 0 14px 40px var(--shade); overflow: hidden;
+  animation: rise .25s ease-out;
+}
+@media (max-width: 520px) { .bar { left: 12px; right: 12px; bottom: 12px; width: auto; } .appwin { inset: 12px; } }
+.bar-main { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 16px; }
+.bar-step { flex: 1; min-width: 0; font-family: var(--f-display); font-weight: 500; font-size: 16.5px; line-height: 1.25; overflow-wrap: anywhere; }
+.bar-step.swap { animation: swap .35s ease-out; }
+.bar-time { font-family: var(--f-mono); font-size: 14px; color: var(--bar-muted); font-variant-numeric: tabular-nums; transition: color .6s; }
+.bar.flow .bar-time { color: var(--bar-flow); }
+.ibtn {
+  width: 36px; height: 36px; flex: none; border: 0; border-radius: 10px;
+  background: var(--bar-btn); color: var(--bar-fg); display: grid; place-items: center;
+}
+.ibtn:hover { background: var(--bar-btn-hover); }
+.ibtn svg { width: 18px; height: 18px; }
+.track { height: 3px; background: var(--bar-line); }
+.fill { height: 100%; width: 0; background: var(--bar-accent); transition: background .6s; }
+.bar.flow .fill { background: var(--bar-flow); }
+.panel { position: relative; border-top: 1px solid var(--bar-line); padding: 14px 16px 16px; display: grid; gap: 10px; }
+.fly {
+  position: absolute; left: 16px; pointer-events: none; font-size: 14px;
+  background: var(--bar-btn-hover); color: var(--bar-fg); border-radius: 8px; padding: 5px 10px;
+  white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis;
+  animation: fly .75s ease-in forwards;
+}
+.count { font-family: var(--f-mono); font-size: 12.5px; color: var(--bar-muted); margin-right: auto; align-self: center; }
+.count.bump { animation: bump .35s; }
+.breath { display: grid; justify-items: center; gap: 10px; padding-block: 18px 6px; }
+.circle {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: color-mix(in srgb, var(--bar-accent) 22%, transparent); border: 2px solid var(--bar-accent);
+  transform: scale(1); transition-property: transform; transition-timing-function: ease-in-out;
+}
+.breath-ring { height: 120px; display: grid; place-items: center; }
+.breath-label { font-family: var(--f-display); font-size: 18px; font-weight: 500; }
+.big { font-family: var(--f-display); font-size: 19px; font-weight: 700; line-height: 1.25; margin: 0; overflow-wrap: anywhere; }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 230px; overflow-y: auto; }
+.items li { display: grid; gap: 4px; padding: 9px 11px; background: var(--bar-btn); border-radius: 9px; overflow-wrap: anywhere; }
+.items .row { margin-top: 4px; }
+.items .pbtn { padding: 4px 10px; font-size: 13px; background: var(--bar-bg); }
+.pick { text-align: left; width: 100%; }
+.q { margin: 0; font-size: 15.5px; line-height: 1.35; }
+.q b { font-weight: 700; }
+.sub { margin: 0; font-size: 13px; color: var(--bar-muted); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pbtn { border: 1px solid var(--bar-line); background: var(--bar-btn); color: var(--bar-fg); border-radius: 9px; padding: 7px 14px; }
+.pbtn:hover { background: var(--bar-btn-hover); }
+.pbtn.primary { background: var(--bar-accent); border-color: var(--bar-accent); color: var(--bar-bg); font-weight: 700; }
+.pbtn.quiet { background: none; border-color: transparent; color: var(--bar-muted); padding-inline: 6px; }
+.pinput {
+  width: 100%; background: var(--bar-btn); border: 1px solid var(--bar-line); color: var(--bar-fg);
+  border-radius: 9px; padding: 9px 12px;
+}
+.pinput::placeholder { color: var(--bar-muted); }
+.pinput:focus { outline: none; border-color: var(--bar-accent); }
+
+.toast {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 99px; padding: 6px 14px; font-size: 13px; box-shadow: 0 6px 20px var(--shade);
+  max-width: calc(100% - 32px); text-align: center;
+}
+.closed { position: absolute; inset: 0; background: var(--desk); display: grid; place-items: center; color: var(--muted); font-family: var(--f-mono); font-size: 13px; }
+
+/* ---------- side panel ---------- */
+aside { display: grid; gap: 14px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.box h3 { font-family: var(--f-display); font-weight: 700; font-size: 15px; margin: 0; }
+.label { font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: none; padding: 5px 12px; font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.ctrl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ctrl .ghost { font-size: 13px; padding: 6px 11px; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.checks label { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: start; font-size: 13.5px; line-height: 1.4; cursor: pointer; }
+.checks input { margin: 2px 0 0; accent-color: var(--accent); }
+.checks input:checked + span { color: var(--muted); text-decoration: line-through; }
+.log { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 260px; overflow-y: auto; font-family: var(--f-mono); font-size: 11.5px; }
+.log li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.log .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+.log .k { color: var(--accent); }
+.log .d { grid-column: 2; color: var(--muted); overflow-wrap: anywhere; }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes swap { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+@keyframes fly { to { transform: translate(150px, 46px) scale(.15); opacity: 0; } }
+@keyframes bump { 50% { transform: scale(1.18); color: var(--bar-accent); } }
+@keyframes shake { 0%,100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Flowmodoro</h1>
+    <span class="tag">protótipo v1.0</span>
+    <p class="lede">Uma simulação da sua tela com uma planilha aberta. O app fica por cima dela. Nada aqui é salvo de verdade: serve para sentir o fluxo antes de escrever código.</p>
+  </header>
+
+  <div class="layout">
+    <section class="screen" id="screen" aria-label="Tela simulada">
+      <div class="appwin" aria-hidden="true">
+        <div class="appwin-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="appwin-name">relatorio_t3.xlsx</span></div>
+        <div class="grid" id="grid"></div>
+      </div>
+
+      <div class="idle" id="idle" hidden>
+        <div class="idle-card">
+          <p>O app está escondido. Ele aparece com o atalho:</p>
+          <div class="keys"><kbd>⌥</kbd><kbd>Espaço</kbd> <span>ou</span> <kbd>Ctrl</kbd><kbd>Espaço</kbd></div>
+          <button class="ghost" id="openBtn">Abrir caixa de intenção</button>
+        </div>
+      </div>
+
+      <div class="entry" id="entry" hidden>
+        <div class="entry-card" id="entryCard">
+          <div id="stageIntent" class="more">
+            <h2><label for="intent">O que precisa ser feito agora?</label></h2>
+            <input class="field" id="intent" autocomplete="off" placeholder="Ex.: fazer o relatório">
+            <p class="hint">Enter para continuar · Esc para fechar</p>
+          </div>
+          <div id="stageStep" class="more" hidden>
+            <p class="entry-task">Tarefa: <b id="entryTitle"></b></p>
+            <h2><label for="s1">Qual o primeiro passo minúsculo?</label></h2>
+            <input class="field" id="s1" autocomplete="off" placeholder="Ex.: abrir a planilha">
+            <button class="linkbtn" id="addMore" type="button">+ adicionar mais passos</button>
+            <div class="more" id="more" hidden>
+              <input class="field sm" id="s2" autocomplete="off" placeholder="Passo 2 (opcional)">
+              <input class="field sm" id="s3" autocomplete="off" placeholder="Passo 3 (opcional)">
+            </div>
+            <p class="hint">Algo que dá para começar em menos de 2 minutos. Enter começa.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar" id="bar" hidden>
+        <div class="bar-main">
+          <div class="bar-step" id="step"></div>
+          <span class="bar-time" id="time">0:00</span>
+          <button class="ibtn" id="doneBtn" data-act="done" title="Concluí este passo" aria-label="Concluí este passo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          </button>
+          <button class="ibtn" id="lostBtn" data-act="lost" title="Perdi o foco (⌥ F)" aria-label="Perdi o foco">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>
+          </button>
+          <button class="ibtn" id="fullBtn" data-act="full" title="Cabeça cheia (⌥ D)" aria-label="Cabeça cheia">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0"/><path d="M3 15.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0"/></svg>
+          </button>
+        </div>
+        <div class="track"><div class="fill" id="fill"></div></div>
+        <div class="panel" id="panel" hidden></div>
+      </div>
+
+      <div class="closed" id="closed" hidden>app fechado…</div>
+      <div class="toast" id="toast" hidden></div>
+    </section>
+
+    <aside>
+      <div class="box">
+        <span class="label">Controles do protótipo</span>
+        <div class="ctrl">
+          <span class="note">Tempo</span>
+          <div class="seg" role="group" aria-label="Velocidade do tempo">
+            <button id="sp1" aria-pressed="true">1×</button>
+            <button id="sp60" aria-pressed="false">60×</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <button class="ghost" id="resetBtn">Começar do zero</button>
+          <button class="ghost" id="reopenBtn">Fechar e reabrir app</button>
+        </div>
+        <p class="note">Abre com uma tarefa de exemplo em 4:40 e dois itens de exemplo na gaveta. Espere 20 segundos para ver a marca dos 5 minutos. A respiração sempre roda em tempo real.</p>
+      </div>
+
+      <div class="box">
+        <h3>O que testar</h3>
+        <ul class="checks" id="checks">
+          <li><label><input type="checkbox" id="c1"><span>“Começar do zero”, depois <kbd>⌥</kbd> <kbd>Espaço</kbd>, e crie uma tarefa com um passo só.</span></label></li>
+          <li><label><input type="checkbox" id="c2"><span>Crie outra usando “+ adicionar mais passos”. Repare que só um aparece por vez.</span></label></li>
+          <li><label><input type="checkbox" id="c3"><span>Conclua o último passo e responda “E agora?”.</span></label></li>
+          <li><label><input type="checkbox" id="c4"><span>Aperte ⚑ e responda Sim.</span></label></li>
+          <li><label><input type="checkbox" id="c5"><span>⚑ → Não → Travou. Troque o passo por um menor.</span></label></li>
+          <li><label><input type="checkbox" id="c6"><span>⚑ → Não → Mudar de assunto → Guardar. Termine a tarefa nova e retome a guardada.</span></label></li>
+          <li><label><input type="checkbox" id="c7"><span>Ligue 60× e deixe o timer passar de 5:00.</span></label></li>
+          <li><label><input type="checkbox" id="c8"><span>Aperte o botão de ondas (ou <kbd>⌥</kbd> <kbd>D</kbd>), despeje 3 pensamentos, respire e volte ao passo.</span></label></li>
+          <li><label><input type="checkbox" id="c9"><span>Despeje de novo e escolha “Algo que anotei é mais urgente”.</span></label></li>
+          <li><label><input type="checkbox" id="c10"><span>Termine uma tarefa e abra a gaveta. Vire um item em tarefa e apague outro.</span></label></li>
+        </ul>
+        <p class="note">Enquanto testa, repare em qualquer momento que pediu decisão demais ou deu vontade de fechar.</p>
+      </div>
+
+      <div class="box">
+        <h3>Registro local</h3>
+        <p class="note">O que o app guardaria. Você não vê isso na v1.0.</p>
+        <ul class="log" id="log"></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (s) => document.querySelector(s);
+  const FIVE = 5 * 60 * 1000;
+  const DAY = 24 * 3600000;
+  const DRAWER_DAYS = 7;
+  let nextId = 100;
+
+  // ---------- fake spreadsheet ----------
+  const rows = [
+    ["Região", "Jul", "Ago", "Set", "Total T3", "Meta", "Δ"],
+    ["Natal", "41.200", "39.850", "44.010", "125.060", "120.000", "+4%"],
+    ["Mossoró", "18.430", "19.120", "17.900", "55.450", "60.000", "−8%"],
+    ["Parnamirim", "22.010", "23.400", "24.880", "70.290", "66.000", "+6%"],
+    ["Caicó", "8.300", "7.950", "9.120", "25.370", "27.000", "−6%"],
+    ["Macaíba", "6.880", "7.010", "7.450", "21.340", "20.000", "+7%"],
+    ["", "", "", "", "", "", ""],
+    ["Total", "96.820", "97.330", "103.360", "297.510", "293.000", "+2%"],
+  ];
+  const grid = $("#grid");
+  const cols = ["", "A", "B", "C", "D", "E", "F", "G"];
+  let html = cols.map((c) => `<div class="cell h">${c}</div>`).join("");
+  for (let r = 1; r <= 20; r++) {
+    html += `<div class="cell h">${r}</div>`;
+    const data = rows[r - 1] || [];
+    for (let c = 0; c < 7; c++) html += `<div class="cell">${data[c] || ""}</div>`;
+  }
+  grid.innerHTML = html;
+
+  // ---------- state ----------
+  let S;
+  function seed() {
+    const now = Date.now();
+    S = {
+      phase: "running",
+      barMode: "normal",
+      task: { title: "Fazer o relatório do T3", elapsed: 4 * 60 * 1000 + 40 * 1000, flowLogged: false },
+      current: "Abrir a planilha",
+      queue: ["Filtrar a coluna Região", "Escrever a introdução"],
+      parked: null,
+      speed: S ? S.speed : 1,
+      closed: false,
+      drawer: [
+        { id: 1, text: "Pagar a conta de luz (exemplo)", t: new Date(now - 2 * DAY) },
+        { id: 2, text: "Ver se o ingresso do show chegou (exemplo)", t: new Date(now - 5 * 3600000) },
+      ],
+      dump: [],
+      pendingTitle: null,
+      breathToken: 0,
+      log: [
+        { t: new Date(now - 280000), type: "passo_iniciado", detail: "Abrir a planilha" },
+        { t: new Date(now - 280000), type: "sessao_iniciada", detail: "Fazer o relatório do T3 · exemplo" },
+      ],
+    };
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function fmt(ms) {
+    const t = Math.floor(ms / 1000), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    const ss = String(s).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+  }
+  function human(ms) {
+    const m = Math.round(ms / 60000);
+    if (m < 1) return "menos de 1 min";
+    if (m < 60) return `${m} min`;
+    return `${Math.floor(m / 60)} h ${m % 60} min`;
+  }
+
+  function when(t) {
+    const days = Math.floor((Date.now() - t) / DAY);
+    if (days < 1) return `hoje às ${t.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    return days === 1 ? "ontem" : `há ${days} dias`;
+  }
+  function daysLeft(t) { return Math.max(1, DRAWER_DAYS - Math.floor((Date.now() - t) / DAY)); }
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  function log(type, detail) {
+    S.log.unshift({ t: new Date(), type, detail });
+    renderLog();
+  }
+  function renderLog() {
+    const el = $("#log");
+    if (!S.log.length) { el.innerHTML = `<li><p class="empty">Nada registrado ainda.</p></li>`; return; }
+    el.innerHTML = S.log.map((e) =>
+      `<li><span class="t">${e.t.toLocaleTimeString("pt-BR")}</span><span class="k">${e.type}</span>${e.detail ? `<span class="d">${esc(e.detail)}</span>` : ""}</li>`
+    ).join("");
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (t.hidden = true), 2600);
+  }
+
+  // ---------- render ----------
+  function panelHTML() {
+    const cur = esc(S.current), title = S.task ? esc(S.task.title) : "";
+    switch (S.barMode) {
+      case "next":
+        return `<p class="q">E agora?</p>
+          <input class="pinput" id="pNext" data-submit="next" autocomplete="off" placeholder="Próximo passo minúsculo">
+          <div class="row"><button class="pbtn" data-act="finish">Terminei a tarefa</button></div>`;
+      case "q1":
+        return `<p class="q">Ainda está em <b>“${cur}”</b>?</p>
+          <div class="row"><button class="pbtn primary" data-act="yes">Sim</button><button class="pbtn" data-act="no">Não</button></div>`;
+      case "q2":
+        return `<p class="q">Tudo bem. A tarefa travou ou você quer mudar de assunto?</p>
+          <div class="row"><button class="pbtn" data-act="stuck">Travou</button><button class="pbtn" data-act="switch">Mudar de assunto</button><button class="pbtn quiet" data-act="back">Voltar ao passo</button></div>`;
+      case "smaller":
+        return `<p class="q">Qual um passo ainda menor?</p>
+          <p class="sub">Ex.: em vez de “escrever a introdução”, “escrever a primeira frase”.</p>
+          <input class="pinput" id="pSmaller" data-submit="smaller" autocomplete="off" placeholder="Passo menor">`;
+      case "dump":
+        return `<p class="q">O que está passando na sua cabeça?</p>
+          <input class="pinput" id="pDump" data-submit="dump" autocomplete="off" placeholder="Um pensamento, depois Enter">
+          <div class="row"><span class="count" id="dumpCount">Enter guarda cada um</span><button class="pbtn primary" data-act="dumpDone">Pronto</button></div>`;
+      case "breathe":
+        return `<div class="breath">
+            <div class="breath-ring"><div class="circle" id="circle"></div></div>
+            <span class="breath-label" id="breathLabel">Inspira</span>
+            <span class="sub" id="breathCount">1 de 3</span>
+          </div>
+          <div class="row"><button class="pbtn quiet" data-act="skipBreath">Pular</button></div>`;
+      case "back":
+        return `<p class="q">${S.dump.length ? "Tudo anotado. " : ""}Agora, só isto:</p>
+          <p class="big">${cur}</p>
+          <div class="row"><button class="pbtn primary" data-act="backToStep">Voltar a isso</button>${S.dump.length ? `<button class="pbtn" data-act="urgent">Algo que anotei é mais urgente</button>` : ""}</div>`;
+      case "pick":
+        return `<p class="q">Qual delas?</p>
+          <div class="row">${S.dump.map((d, i) => `<button class="pbtn pick" data-act="pick" data-i="${i}">${esc(d.text)}</button>`).join("")}</div>
+          <div class="row"><button class="pbtn quiet" data-act="toBack">Nenhuma, voltar</button></div>`;
+      case "drawer": {
+        if (!S.drawer.length) {
+          return `<p class="q">A gaveta está vazia.</p><div class="row"><button class="pbtn primary" data-act="close">Fechar</button></div>`;
+        }
+        const items = S.drawer.map((d) => `<li><span>${esc(d.text)}</span>
+            <span class="sub">anotado ${when(d.t)} · some em ${plural(daysLeft(d.t), "dia", "dias")}</span>
+            <div class="row"><button class="pbtn" data-act="toTask" data-id="${d.id}">Virar tarefa</button><button class="pbtn quiet" data-act="del" data-id="${d.id}">Apagar</button></div></li>`).join("");
+        return `<p class="q">Gaveta</p><ul class="items">${items}</ul>
+          <div class="row"><button class="pbtn" data-act="close">Fechar</button></div>`;
+      }
+      case "park":
+        return `<p class="q">Guardar <b>“${title}”</b> para depois ou soltar?</p>
+          <p class="sub">${S.pendingTitle ? `Depois você começa “${esc(S.pendingTitle)}”. ` : ""}Se guardar, ela volta quando você terminar a próxima tarefa.</p>
+          <div class="row"><button class="pbtn primary" data-act="keep">Guardar</button><button class="pbtn" data-act="drop">Soltar</button></div>`;
+      case "parkConfirm":
+        return `<p class="q">Isso vai soltar <b>“${esc(S.parked.title)}”</b>, que já estava guardada. Ok?</p>
+          <div class="row"><button class="pbtn primary" data-act="confirmKeep">Ok, guardar a nova</button><button class="pbtn" data-act="park">Voltar</button></div>`;
+      case "done":
+        if (S.parked) {
+          return `<p class="q">Feito. ${human(S.task.elapsed)} em “${title}”.</p>
+            <p class="sub">Você tinha guardado “${esc(S.parked.title)}”.</p>
+            <div class="row"><button class="pbtn primary" data-act="resume">Retomar</button><button class="pbtn" data-act="dropParked">Soltar</button></div>`;
+        }
+        if (S.drawer.length) {
+          return `<p class="q">Feito. ${human(S.task.elapsed)} em “${title}”.</p>
+            <p class="sub">Tem ${plural(S.drawer.length, "coisa", "coisas")} na gaveta. Ver agora?</p>
+            <div class="row"><button class="pbtn primary" data-act="drawerOpen">Ver</button><button class="pbtn" data-act="close">Depois</button></div>`;
+        }
+        return `<p class="q">Feito. ${human(S.task.elapsed)} em “${title}”.</p>
+          <div class="row"><button class="pbtn primary" data-act="close">Fechar</button></div>`;
+    }
+    return "";
+  }
+
+  let lastMode = null;
+  function render(opts = {}) {
+    $("#idle").hidden = S.phase !== "idle" || S.closed;
+    $("#entry").hidden = !(S.phase === "intent" || S.phase === "firststep") || S.closed;
+    $("#stageIntent").hidden = S.phase !== "intent";
+    $("#stageStep").hidden = S.phase !== "firststep";
+    $("#bar").hidden = S.phase !== "running" || S.closed;
+    $("#closed").hidden = !S.closed;
+
+    if (S.phase === "running") {
+      const step = $("#step");
+      const done = S.barMode === "done";
+      step.textContent = done ? S.task.title : S.current;
+      if (opts.swap) { step.classList.remove("swap"); void step.offsetWidth; step.classList.add("swap"); }
+      $("#doneBtn").hidden = done || S.barMode !== "normal";
+      $("#lostBtn").hidden = done || S.barMode !== "normal";
+      $("#fullBtn").hidden = done || S.barMode !== "normal";
+      const panel = $("#panel");
+      panel.hidden = S.barMode === "normal";
+      if (S.barMode !== lastMode) {
+        panel.innerHTML = panelHTML();
+        const inp = panel.querySelector("input");
+        if (inp) inp.focus();
+        else { const b = panel.querySelector(".primary, .pbtn"); if (b) b.focus({ preventScroll: true }); }
+      }
+      renderTimer();
+    }
+    lastMode = S.phase === "running" ? S.barMode : null;
+  }
+
+  function renderTimer() {
+    if (!S.task) return;
+    const e = S.task.elapsed;
+    $("#time").textContent = fmt(e);
+    $("#fill").style.width = Math.min(100, (e / FIVE) * 100) + "%";
+    $("#bar").classList.toggle("flow", e >= FIVE);
+  }
+
+  // ---------- timer ----------
+  let last = performance.now();
+  setInterval(() => {
+    const now = performance.now(), dt = now - last;
+    last = now;
+    if (S.phase === "running" && S.barMode !== "done" && !S.closed && S.task) {
+      S.task.elapsed += dt * S.speed;
+      if (!S.task.flowLogged && S.task.elapsed >= FIVE) { S.task.flowLogged = true; log("marca_5min", S.task.title); }
+      renderTimer();
+    }
+  }, 200);
+
+  // ---------- entry ----------
+  function openEntry() {
+    if (S.closed) return;
+    if (S.phase === "running") { toast("A barra já mostra a tarefa atual."); return; }
+    if (S.phase !== "idle") return;
+    S.phase = "intent";
+    render();
+    $("#intent").focus();
+  }
+  function closeEntry() {
+    S.phase = "idle";
+    clearEntry();
+    render();
+  }
+  function clearEntry() {
+    ["#intent", "#s1", "#s2", "#s3"].forEach((s) => ($(s).value = ""));
+    $("#more").hidden = true;
+    $("#addMore").hidden = false;
+  }
+  function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); el.focus(); }
+
+  $("#intent").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const v = e.target.value.trim();
+    if (!v) return shake(e.target);
+    S.draftTitle = v;
+    $("#entryTitle").textContent = v;
+    S.phase = "firststep";
+    render();
+    $("#s1").focus();
+  });
+  ["#s1", "#s2", "#s3"].forEach((sel) =>
+    $(sel).addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      const steps = ["#s1", "#s2", "#s3"].map((s) => $(s).value.trim()).filter(Boolean);
+      if (!$("#s1").value.trim()) return shake($("#s1"));
+      startTask(S.draftTitle, steps);
+    })
+  );
+  $("#addMore").addEventListener("click", () => {
+    $("#more").hidden = false;
+    $("#addMore").hidden = true;
+    $("#s2").focus();
+  });
+
+  function startTask(title, steps) {
+    S.task = { title, elapsed: 0, flowLogged: false };
+    S.current = steps[0];
+    S.queue = steps.slice(1);
+    S.phase = "running";
+    S.barMode = "normal";
+    log("sessao_iniciada", title);
+    log("passo_iniciado", S.current);
+    clearEntry();
+    render({ swap: true });
+  }
+  function toNewTask() {
+    S.task = null; S.current = ""; S.queue = [];
+    S.barMode = "normal";
+    if (S.pendingTitle) {
+      S.draftTitle = S.pendingTitle;
+      $("#entryTitle").textContent = S.pendingTitle;
+      S.pendingTitle = null;
+      S.phase = "firststep";
+      render();
+      $("#s1").focus();
+      return;
+    }
+    S.phase = "intent";
+    render();
+    $("#intent").focus();
+  }
+  function rerender() { lastMode = null; render(); }
+
+  // breathing: 3 cycles of 4s in, 6s out; not affected by the speed toggle
+  function startBreath() {
+    const token = ++S.breathToken;
+    const alive = () => token === S.breathToken && S.barMode === "breathe";
+    const c = $("#circle");
+    let cycle = 0;
+    function inhale() {
+      if (!alive()) return;
+      cycle++;
+      $("#breathLabel").textContent = "Inspira";
+      $("#breathCount").textContent = `${cycle} de 3`;
+      c.style.transitionDuration = "4s";
+      c.style.transform = "scale(1.75)";
+      setTimeout(exhale, 4000);
+    }
+    function exhale() {
+      if (!alive()) return;
+      $("#breathLabel").textContent = "Solta devagar";
+      c.style.transitionDuration = "6s";
+      c.style.transform = "scale(1)";
+      setTimeout(() => { if (!alive()) return; cycle < 3 ? inhale() : actions.breathDone(); }, 6000);
+    }
+    requestAnimationFrame(() => requestAnimationFrame(inhale));
+  }
+  function removeFromDrawer(id) {
+    const i = S.drawer.findIndex((d) => d.id === id);
+    return i >= 0 ? S.drawer.splice(i, 1)[0] : null;
+  }
+
+  // ---------- bar actions ----------
+  const actions = {
+    done() {
+      log("passo_concluido", S.current);
+      if (S.queue.length) {
+        S.current = S.queue.shift();
+        log("passo_iniciado", S.current);
+        render({ swap: true });
+      } else { S.barMode = "next"; render(); }
+    },
+    lost() { log("perdi_foco", S.current); S.barMode = "q1"; render(); },
+    yes() { log("foco_confirmado", S.current); S.barMode = "normal"; render(); },
+    no() { S.barMode = "q2"; render(); },
+    back() { S.barMode = "normal"; render(); },
+    stuck() { log("travou", S.current); S.barMode = "smaller"; render(); },
+    switch() { log("mudou_de_assunto", S.task.title); S.barMode = "park"; render(); },
+    park() { S.barMode = "park"; render(); },
+    keep() { if (S.parked) { S.barMode = "parkConfirm"; render(); } else doPark(); },
+    confirmKeep() { log("soltou", S.parked.title); doPark(); },
+    drop() { log("soltou", S.task.title); toNewTask(); },
+    finish() { log("tarefa_concluida", `${S.task.title} · ${fmt(S.task.elapsed)}`); S.barMode = "done"; render(); },
+    resume() {
+      const p = S.parked;
+      S.parked = null;
+      S.task = { title: p.title, elapsed: p.elapsed, flowLogged: p.flowLogged };
+      S.current = p.current; S.queue = p.queue;
+      S.barMode = "normal";
+      log("retomou", p.title);
+      render({ swap: true });
+    },
+    dropParked() { log("soltou", S.parked.title); S.parked = null; actions.close(); },
+    close() { S.phase = "idle"; S.barMode = "normal"; S.task = null; render(); },
+
+    full() { log("cabeca_cheia", S.current); S.dump = []; S.barMode = "dump"; render(); },
+    dumpDone() { S.barMode = "breathe"; render(); startBreath(); },
+    skipBreath() { S.breathToken++; log("respiracao_pulada"); S.barMode = "back"; render(); },
+    breathDone() { log("respiracao_completa"); S.barMode = "back"; render(); },
+    backToStep() { log("voltou_ao_passo", S.current); S.barMode = "normal"; render(); },
+    urgent() { S.barMode = "pick"; render(); },
+    toBack() { S.barMode = "back"; render(); },
+    pick(b) {
+      const item = S.dump[+b.dataset.i];
+      removeFromDrawer(item.id);
+      S.dump = [];
+      S.pendingTitle = item.text;
+      log("pensamento_virou_tarefa", item.text);
+      S.barMode = "park";
+      render();
+    },
+    drawerOpen() { S.barMode = "drawer"; render(); },
+    toTask(b) {
+      const item = removeFromDrawer(+b.dataset.id);
+      log("pensamento_virou_tarefa", item.text);
+      S.pendingTitle = item.text;
+      toNewTask();
+    },
+    del(b) {
+      const item = removeFromDrawer(+b.dataset.id);
+      log("pensamento_apagado", item.text);
+      rerender();
+    },
+  };
+  function doPark() {
+    S.parked = { title: S.task.title, current: S.current, queue: S.queue.slice(), elapsed: S.task.elapsed, flowLogged: S.task.flowLogged };
+    log("guardou", S.task.title);
+    toNewTask();
+  }
+  const submits = {
+    next(v) { S.current = v; log("passo_iniciado", v); S.barMode = "normal"; render({ swap: true }); },
+    smaller(v) { S.current = v; log("passo_reduzido", v); S.barMode = "normal"; render({ swap: true }); },
+    dump(v, inp) {
+      const item = { id: nextId++, text: v, t: new Date() };
+      S.drawer.push(item);
+      S.dump.push(item);
+      log("pensamento_anotado", v);
+      const fly = document.createElement("span");
+      fly.className = "fly";
+      fly.textContent = v;
+      fly.style.top = inp.offsetTop + 4 + "px";
+      inp.parentNode.appendChild(fly);
+      fly.addEventListener("animationend", () => fly.remove());
+      setTimeout(() => fly.remove(), 1000);
+      inp.value = "";
+      const cnt = $("#dumpCount");
+      cnt.textContent = `${plural(S.dump.length, "guardado", "guardados")} na gaveta`;
+      cnt.classList.remove("bump"); void cnt.offsetWidth; cnt.classList.add("bump");
+    },
+  };
+
+  $("#bar").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-act]");
+    if (b && actions[b.dataset.act]) actions[b.dataset.act](b);
+  });
+  $("#bar").addEventListener("keydown", (e) => {
+    const inp = e.target.closest("[data-submit]");
+    if (inp && e.key === "Enter") {
+      const v = inp.value.trim();
+      if (!v) return shake(inp);
+      submits[inp.dataset.submit](v, inp);
+    }
+  });
+
+  // ---------- keyboard ----------
+  document.addEventListener("keydown", (e) => {
+    if ((e.altKey || e.ctrlKey) && e.code === "Space") { e.preventDefault(); openEntry(); return; }
+    if (e.altKey && e.code === "KeyF") {
+      e.preventDefault();
+      if (S.phase === "running" && S.barMode === "normal" && !S.closed) actions.lost();
+      return;
+    }
+    if (e.altKey && e.code === "KeyD") {
+      e.preventDefault();
+      if (S.phase === "running" && S.barMode === "normal" && !S.closed) actions.full();
+      return;
+    }
+    if (e.key === "Escape") {
+      if (S.phase === "intent" || S.phase === "firststep") closeEntry();
+      else if (S.phase === "running") {
+        if (["q1", "q2", "smaller"].includes(S.barMode)) actions.back();
+        else if (S.barMode === "dump") actions.dumpDone();
+        else if (S.barMode === "breathe") actions.skipBreath();
+        else if (S.barMode === "pick") actions.toBack();
+      }
+    }
+  });
+  $("#openBtn").addEventListener("click", openEntry);
+
+  // ---------- prototype controls ----------
+  function setSpeed(n) {
+    S.speed = n;
+    $("#sp1").setAttribute("aria-pressed", String(n === 1));
+    $("#sp60").setAttribute("aria-pressed", String(n === 60));
+  }
+  $("#sp1").addEventListener("click", () => setSpeed(1));
+  $("#sp60").addEventListener("click", () => setSpeed(60));
+  $("#resetBtn").addEventListener("click", () => {
+    S = { phase: "idle", barMode: "normal", task: null, current: "", queue: [], parked: null, speed: S.speed, closed: false,
+      drawer: [], dump: [], pendingTitle: null, breathToken: S.breathToken + 1, log: [] };
+    clearEntry(); renderLog(); render();
+    toast("Tudo limpo. Use ⌥ Espaço para começar.");
+  });
+  $("#reopenBtn").addEventListener("click", () => {
+    if (S.closed) return;
+    S.closed = true; render();
+    setTimeout(() => {
+      S.closed = false; render();
+      toast(S.phase === "running" ? "Retomado de onde parou." : "Reaberto. Nada estava em andamento.");
+    }, 1100);
+  });
+
+  // checklist remembered per viewer (convenience only)
+  document.querySelectorAll("#checks input").forEach((c) => {
+    try { c.checked = localStorage.getItem("fm-" + c.id) === "1"; } catch (_) {}
+    c.addEventListener("change", () => { try { localStorage.setItem("fm-" + c.id, c.checked ? "1" : "0"); } catch (_) {} });
+  });
+
+  seed();
+  renderLog();
+  render();
+})();
+</script>
