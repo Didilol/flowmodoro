@@ -14,7 +14,6 @@
 
   // Only the generator pages get trimmed; anything else (e.g. donating) shows as is.
   const generator = location.pathname.startsWith("/NoiseMachines/");
-  if (generator) document.documentElement.classList.add("fm");
 
   // Slider handles fade from the app's teal to its "flow" gold.
   const handles = Array.from({ length: 10 }, (_, i) =>
@@ -98,9 +97,24 @@ html.fm #powerTip { background: var(--fm-panel) !important; color: var(--fm-fg) 
   const style = document.createElement("style");
   style.id = "fm-skin";
   style.textContent = css;
-  (document.head || document.documentElement).appendChild(style);
+
+  // WebKit (Mac) runs this with <html> already in place; WebView2 (Windows) runs it
+  // before <html> exists, so wait for it instead of touching it right away.
+  const dress = () => {
+    const root = document.documentElement;
+    if (!root) return false;
+    if (generator) root.classList.add("fm");
+    (document.head || root).appendChild(style);
+    return true;
+  };
+  if (!dress()) {
+    new MutationObserver((_, observer) => {
+      if (dress()) observer.disconnect();
+    }).observe(document, { childList: true });
+  }
 
   document.addEventListener("DOMContentLoaded", () => {
+    if (generator) document.documentElement.classList.add("fm");
     // Move to the end so it wins over the page's own <style> blocks.
     document.head.appendChild(style);
 
