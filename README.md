@@ -24,7 +24,7 @@ Precisa de Node e Rust ([rustup](https://rustup.rs)).
 
 ## Gerar o app
 
-- **Mac:** `npm run tauri build` dentro de `app/`. O instalador fica em `app/src-tauri/target/release/bundle/`.
+- **Mac:** `CI=true npm run tauri build` dentro de `app/`. O instalador fica em `app/src-tauri/target/release/bundle/`. O `CI=true` pula a etapa em que o Finder arruma os ícones da janela do `.dmg`, que pode travar esperando permissão.
 - **Windows:** no GitHub, *Actions → Windows → Run workflow*. Ao terminar, o instalador fica nos *Artifacts* da execução. Também roda sozinho ao enviar uma tag `v*`.
 
 ## Pastas
