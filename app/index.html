@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowmodoro</title>
+    <script type="module" src="/src/bar.ts"></script>
+  </head>
+
+  <body class="bar-body">
+    <div class="bar-wrap">
+    <div id="mascot" title=""></div>
+    <div class="bar" id="bar">
+      <div class="bar-main">
+        <div class="bar-step" id="step" data-tauri-drag-region>
+          <span class="kind" id="kind" hidden data-tauri-drag-region></span>
+          <span class="step-text" id="stepText" data-tauri-drag-region></span>
+          <span class="step-sub" id="stepSub" hidden data-tauri-drag-region></span>
+          <span class="bar-hint" id="hint" aria-hidden="true"><b id="hintText"></b><span class="key" id="hintKey"></span></span>
+        </div>
+        <span class="bar-time" id="time" data-tauri-drag-region>0:00</span>
+        <button class="ibtn" id="plusBtn" data-hint="Salvei mais uma referência" aria-label="Salvei mais uma referência" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
+        <button class="ibtn" id="doneBtn" data-hint="Concluí este passo" aria-label="Concluí este passo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+        </button>
+        <button class="ibtn" id="lostBtn" data-hint="Perdi o foco" data-key="F" aria-label="Perdi o foco">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4" /><path d="M5 4h11l-2 4 2 4H5" /></svg>
+        </button>
+        <button class="ibtn" id="fullBtn" data-hint="Cabeça cheia" data-key="D" aria-label="Cabeça cheia">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0" /><path d="M3 15.5c2.2-2 3.8-2 6 0s3.8 2 6 0 3.8-2 6 0" /></svg>
+        </button>
+      </div>
+      <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+    </div>
+  </body>
+</html>
