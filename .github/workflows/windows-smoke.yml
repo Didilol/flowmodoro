@@ -94,10 +94,11 @@ jobs:
           (New-Object -ComObject Shell.Application).MinimizeAll()
           Start-Sleep 2
 
-          # 1. First launch: the box should open asking what needs to be done.
-          $p = Start-Process $exe.FullName -PassThru
+          # 1. First launch through Explorer, like a double-click: the box should open on its own.
+          Start-Process explorer.exe -ArgumentList "`"$($exe.FullName)`""
           Start-Sleep 15
-          if ($p.HasExited) { throw "o app fechou sozinho (código $($p.ExitCode))" }
+          $p = Get-Process | Where-Object { $_.Path -like "$installDir*" } | Select-Object -First 1
+          if (-not $p) { throw "o app não abriu (ou fechou sozinho)" }
           Shot "1-primeira-abertura"
           Report "Janelas na primeira abertura"
           $firstOpen = BoxVisible
@@ -129,9 +130,16 @@ jobs:
           Start-Sleep 16   # the app saves its state every 15 s
           $db = "$env:APPDATA\com.flowmodoro.app\flowmodoro.db"
           if (-not (Test-Path $db)) { throw "banco de dados não criado em $db" }
-          $bytes = [System.IO.File]::ReadAllBytes($db)
-          $text = [System.Text.Encoding]::UTF8.GetString($bytes)
-          Write-Host "Banco de dados: $db ($($bytes.Length) bytes)"
+          # The app keeps the database open (and recent writes may still sit in the -wal file).
+          $text = ""
+          foreach ($f in @($db, "$db-wal")) {
+            if (Test-Path $f) {
+              $fs = [System.IO.File]::Open($f, "Open", "Read", "ReadWrite")
+              $ms = New-Object System.IO.MemoryStream; $fs.CopyTo($ms); $fs.Close()
+              $text += [System.Text.Encoding]::UTF8.GetString($ms.ToArray())
+              Write-Host "Banco: $f ($($ms.Length) bytes)"
+            }
+          }
           if ($text -notmatch "Testar o Focora no Windows") { throw "a tarefa digitada não foi salva (a digitação não chegou ao app)" }
           Write-Host "A tarefa digitada está salva no banco."
 
