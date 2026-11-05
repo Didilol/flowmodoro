@@ -3,12 +3,13 @@ mod db;
 mod focus;
 mod sound;
 mod state;
+mod update;
 
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 
-use tauri::menu::{CheckMenuItem, Menu, MenuItem};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
@@ -16,11 +17,14 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
 
-use commands::{AppState, BarSolid, Settings, box_visible, close_box, commit, open_box, show_home, state_view};
+use commands::{
+    AppState, BarSolid, PEEK_CHOICES, Settings, TIMER_MODES, box_visible, close_box, commit, open_box, show_home,
+    state_view,
+};
 use db::Db;
 use state::{Core, Snapshot};
 
-const BAR_W: f64 = 400.0;
+const BAR_W: f64 = 440.0;
 // Room above the bar for the mascot; the empty part lets clicks through (see BarSolid).
 const BAR_H: f64 = 140.0;
 const BAR_MARGIN: f64 = 20.0;
@@ -49,7 +53,7 @@ fn place_bar(bar: &WebviewWindow) {
     let _ = bar.set_position(PhysicalPosition::new(x, y));
 }
 
-fn save_now(app: &AppHandle) {
+pub(crate) fn save_now(app: &AppHandle) {
     let core = app.state::<AppState>();
     let core = core.0.lock().unwrap();
     app.state::<Db>().save_snapshot(&Snapshot::of(&core));
@@ -171,9 +175,10 @@ pub fn run() {
     let full = Shortcut::new(Some(task_mods), Code::KeyD);
     let home = Shortcut::new(Some(task_mods), Code::KeyH);
     let sounds = Shortcut::new(Some(task_mods), Code::KeyS);
+    let pause = Shortcut::new(Some(task_mods), Code::KeyP);
 
     let shortcuts = tauri_plugin_global_shortcut::Builder::new()
-        .with_shortcuts([open, lost, full, home, sounds])
+        .with_shortcuts([open, lost, full, home, sounds, pause])
         .expect("atalho global inválido")
         .with_handler(move |app, shortcut, event| {
             if event.state != ShortcutState::Pressed {
@@ -189,12 +194,15 @@ pub fn run() {
                 on_home_shortcut(app);
             } else if shortcut == &sounds {
                 sound::toggle(app);
+            } else if shortcut == &pause {
+                commands::toggle_pause(app.clone(), app.state(), app.state());
             }
         })
         .build();
 
     tauri::Builder::default()
         .plugin(shortcuts)
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::get_state,
             commands::show_box,
@@ -203,6 +211,7 @@ pub fn run() {
             commands::complete_step,
             commands::set_step,
             commands::log_event,
+            commands::toggle_pause,
             commands::park_task,
             commands::drop_task,
             commands::finish_task,
@@ -243,7 +252,7 @@ pub fn run() {
             app.manage(BarSolid::default());
 
             let bar = WebviewWindowBuilder::new(app, "bar", WebviewUrl::App("index.html".into()))
-                .title("Flowmodoro")
+                .title("Focora")
                 .inner_size(BAR_W, BAR_H)
                 .resizable(false)
                 .decorations(false)
@@ -260,7 +269,7 @@ pub fn run() {
             focus::float_everywhere(&bar);
 
             let entry = WebviewWindowBuilder::new(app, "entry", WebviewUrl::App("entry.html".into()))
-                .title("Flowmodoro")
+                .title("Focora")
                 .inner_size(ENTRY_W, ENTRY_H)
                 .resizable(false)
                 .decorations(false)
@@ -291,19 +300,48 @@ pub fn run() {
             let open_item = MenuItem::with_id(app, "open", OPEN_LABEL, true, None::<&str>)?;
             let home_item = MenuItem::with_id(app, "home", HOME_LABEL, true, None::<&str>)?;
             let sound_item = MenuItem::with_id(app, "sound", SOUND_LABEL, true, None::<&str>)?;
-            let mascot_on = Settings::load(&app.state::<Db>()).mascot;
-            let mascot_item = CheckMenuItem::with_id(app, "mascot", "Mascote", true, mascot_on, None::<&str>)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Sair do Flowmodoro", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open_item, &home_item, &sound_item, &mascot_item, &quit_item])?;
+            let settings = Settings::load(&app.state::<Db>());
+            let mascot_item = CheckMenuItem::with_id(app, "mascot", "Mascote", true, settings.mascot, None::<&str>)?;
+            // Picked like radio buttons: one checked per group, kept in sync by hand below.
+            let mode_items = TIMER_MODES
+                .iter()
+                .map(|(id, label)| {
+                    CheckMenuItem::with_id(app, format!("timer:{id}"), *label, true, settings.timer == *id, None::<&str>)
+                })
+                .collect::<tauri::Result<Vec<_>>>()?;
+            let peek_items = PEEK_CHOICES
+                .iter()
+                .map(|m| {
+                    let label = format!("Mostrar o tempo a cada {m} min");
+                    CheckMenuItem::with_id(app, format!("peek:{m}"), label, true, settings.peek_min == *m, None::<&str>)
+                })
+                .collect::<tauri::Result<Vec<_>>>()?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let mut timer_entries: Vec<&dyn tauri::menu::IsMenuItem<_>> = Vec::new();
+            timer_entries.extend(mode_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>));
+            timer_entries.push(&separator);
+            timer_entries.extend(peek_items.iter().map(|i| i as &dyn tauri::menu::IsMenuItem<_>));
+            let timer_menu = Submenu::with_items(app, "Timer", true, &timer_entries)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Sair do Focora", true, None::<&str>)?;
+            let menu =
+                Menu::with_items(app, &[&open_item, &home_item, &sound_item, &mascot_item, &timer_menu, &quit_item])?;
             let mut tray = TrayIconBuilder::new()
-                .tooltip("Flowmodoro")
+                .tooltip("Focora")
                 .menu(&menu)
                 .show_menu_on_left_click(true)
                 .on_menu_event(move |app, event| match event.id.as_ref() {
                     "open" => on_open_shortcut(app),
                     "mascot" => {
                         let on = mascot_item.is_checked().unwrap_or(true);
-                        commands::set_mascot(app, on);
+                        commands::save_setting(app, "mascot", if on { "on" } else { "off" });
+                    }
+                    id if id.starts_with("timer:") || id.starts_with("peek:") => {
+                        let (key, value) = id.split_once(':').unwrap();
+                        let group = if key == "timer" { &mode_items } else { &peek_items };
+                        for item in group {
+                            let _ = item.set_checked(item.id().as_ref() == id);
+                        }
+                        commands::save_setting(app, if key == "timer" { "timer" } else { "peek_min" }, value);
                     }
                     "home" => show_home(app),
                     "sound" => sound::show(app),
@@ -313,6 +351,13 @@ pub fn run() {
                     }
                     _ => {}
                 });
+            // Mac: a black-and-alpha template the menu bar tints for light and dark mode.
+            #[cfg(target_os = "macos")]
+            {
+                let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))?;
+                tray = tray.icon(icon).icon_as_template(true);
+            }
+            #[cfg(not(target_os = "macos"))]
             if let Some(icon) = app.default_window_icon() {
                 tray = tray.icon(icon.clone());
             }
@@ -320,6 +365,7 @@ pub fn run() {
 
             focus::start_tracking(app.handle().clone());
             start_hover_tracking(app.handle().clone());
+            update::start(app.handle().clone());
 
             // Keep the saved timer fresh in case the app is killed without "Sair".
             let handle = app.handle().clone();
@@ -343,5 +389,5 @@ pub fn run() {
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("erro ao iniciar o Flowmodoro");
+        .expect("erro ao iniciar o Focora");
 }

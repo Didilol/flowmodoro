@@ -96,7 +96,7 @@ button { cursor: pointer; }
   transition: background-color 0.15s, color 0.15s, transform 0.12s ease-out, box-shadow 0.15s;
 }
 .ibtn:hover, .ibtn.hover { background: var(--bar-btn-hover); transform: translateY(-1px); box-shadow: 0 0 0 1px var(--bar-line); }
-:is(.ibtn:hover, .ibtn.hover):is(#doneBtn, #plusBtn, #fullBtn) { color: var(--bar-accent); }
+:is(.ibtn:hover, .ibtn.hover):is(#doneBtn, #plusBtn, #fullBtn, #pauseBtn) { color: var(--bar-accent); }
 :is(.ibtn:hover, .ibtn.hover)#lostBtn { color: var(--bar-flow); }
 .ibtn:active, .ibtn.pressed { transform: scale(0.9); transition-duration: 0.06s; }
 .ibtn svg { width: 18px; height: 18px; }
@@ -108,6 +108,60 @@ button { cursor: pointer; }
 .track { height: 3px; background: var(--bar-line); }
 .fill { height: 100%; width: 0; background: var(--bar-accent); transition: background 0.6s; }
 .bar.flow .fill { background: var(--bar-flow); }
+
+/* paused: the clock goes grey and ▶ lights up, so it's clear what to press */
+.i-play, .paused .i-pause { display: none; }
+.paused .i-play { display: block; }
+.paused #pauseBtn:not(.hover):not(:hover) { background: var(--bar-accent); color: var(--bar-bg); }
+.paused :is(.bar-time, .bar.flow .bar-time) { color: var(--bar-muted); }
+.paused :is(.fill, .bar.flow .fill) { background: var(--bar-muted); }
+
+/* ---------- minimal timer ----------
+   Just the circle in the corner. Hovering it slides the bar in beside it,
+   without its own clock and track (the circle already shows both). */
+.dial-wrap { position: relative; flex: none; transform-origin: 100% 100%; transition: transform 0.35s cubic-bezier(0.3, 1.3, 0.5, 1); }
+.dial {
+  position: relative; z-index: 1;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--bar-bg); border: 1px solid var(--bar-line);
+  display: grid; place-content: center; justify-items: center; gap: 3px;
+}
+.dial svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; }
+.dial circle { fill: none; stroke-width: 3; }
+.dial-track { stroke: var(--bar-line); transition: stroke 0.3s; }
+.dial-fill {
+  stroke: var(--bar-accent); stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+  transition: stroke-dashoffset 1s linear, stroke 0.6s, opacity 0.2s;
+}
+.dial.flow .dial-fill { stroke: var(--bar-flow); }
+.dial-time {
+  font-family: var(--f-mono); font-size: 13px; font-weight: 500; color: var(--bar-fg);
+  font-variant-numeric: tabular-nums; pointer-events: none; transition: color 0.6s, opacity 0.2s;
+}
+.dial-time.long { font-size: 10.5px; }
+.dial.flow .dial-time { color: var(--bar-flow); }
+.dial.nudge { animation: nudge 0.6s ease-in-out; }
+.dial-paused { display: none; width: 8px; height: 9px; border-inline: 2.5px solid var(--bar-muted); }
+.paused .dial-paused { display: block; }
+.paused :is(.dial-time, .dial.flow .dial-time) { color: var(--bar-muted); }
+.paused :is(.dial-fill, .dial.flow .dial-fill) { stroke: var(--bar-muted); }
+/* minimized: a dot with the mascot (if on) shrunk along; no numbers, no progress */
+.dial-wrap.min { transform: scale(0.5); }
+.dial-wrap.min :is(.dial-time, .dial-fill) { opacity: 0; }
+/* the outline keeps the dot findable on a dark desktop */
+.dial-wrap.min .dial-track { stroke: var(--bar-accent); }
+.dial-wrap.min .dial.flow .dial-track { stroke: var(--bar-flow); }
+
+.bar-wrap.compact { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; }
+.compact .bar {
+  flex: 1; min-width: 0; width: auto;
+  opacity: 0; transform: translateX(10px); visibility: hidden;
+  transition: opacity 0.18s, transform 0.18s ease-out, visibility 0s 0.18s;
+}
+.compact.open .bar { opacity: 1; transform: none; visibility: visible; transition-delay: 0s; }
+.compact .bar-main { min-height: 62px; }
+.compact :is(.bar-time, .track) { display: none; }
 
 /* ---------- mascot ----------
    Still by default: no looping animation, so it costs nothing while you work.
@@ -145,8 +199,10 @@ button { cursor: pointer; }
 
 /* on the bar: the body hides behind it, the paws rest on its top edge */
 .bar-wrap > .mascot { position: absolute; left: 22px; bottom: calc(100% - 8px); width: 56px; }
-.bar-wrap > .mascot .m-body { position: relative; z-index: 0; }
-.bar-wrap > .mascot .m-paws { position: absolute; left: 0; bottom: 3px; z-index: 2; }
+:is(.bar-wrap, .dial-wrap) > .mascot .m-body { position: relative; z-index: 0; }
+:is(.bar-wrap, .dial-wrap) > .mascot .m-paws { position: absolute; left: 0; bottom: 3px; z-index: 2; }
+/* on the minimal timer: same pose, a bit smaller, centered on the circle */
+.dial-wrap > .mascot { position: absolute; left: 7px; bottom: calc(100% - 7px); width: 50px; }
 
 /* in the box, after finishing a task */
 .done-head { display: flex; align-items: center; gap: 14px; }

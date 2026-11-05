@@ -44,7 +44,10 @@ function dayName(offset: number) {
   return new Date(startOfDay(offset)).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "short" });
 }
 
-const liveElapsed = () => (state?.task ? state.task.elapsedMs + (performance.now() - snapshotAt) : 0);
+const liveElapsed = () => {
+  const t = state?.task;
+  return t ? t.elapsedMs + (t.paused ? 0 : performance.now() - snapshotAt) : 0;
+};
 
 // ---------- panels ----------
 
@@ -54,7 +57,7 @@ function renderNow() {
   if (t) {
     const kind = KIND_LABEL[t.step.kind];
     html = `
-      <p class="eyebrow">Agora${kind ? ` · ${kind}` : ""}</p>
+      <p class="eyebrow">Agora${kind ? ` · ${kind}` : ""}${t.paused ? " · pausado" : ""}</p>
       <p class="now-title">${esc(t.title)}</p>
       <p class="now-step"><span>Passo:</span> ${esc(t.step.text)}</p>
       <p class="now-time" id="nowTime">${formatClock(liveElapsed())}</p>`;

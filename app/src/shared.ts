@@ -8,6 +8,7 @@ export type TaskView = {
   tutorial: Tutorial | null;
   hasQueue: boolean;
   elapsedMs: number;
+  paused: boolean;
 };
 export type StateView = {
   task: TaskView | null;
@@ -48,4 +49,4 @@ export function escapeHtml(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 }
 
-export type Settings = { mascot: boolean };
+export type Settings = { mascot: boolean; timer: "bar" | "circle" | "dot"; peekMin: number };

@@ -12,8 +12,8 @@ export type Moment = "cheer" | "look" | "finish" | "inhale" | "exhale";
 const BODY = `
 <svg class="m-body" viewBox="0 -8 64 68" aria-hidden="true">
   <g class="m-sprout">
-    <path d="M32 7 C32 3 31.5 0 30 -3" fill="none" stroke="var(--m-leaf)" stroke-width="2.2" stroke-linecap="round" />
-    <path d="M30.5 -2 C33 -7 39 -8 42 -5 C39 -1 34 0 30.5 -2 Z" fill="var(--m-leaf)" />
+    <path d="M33 7 A7 7 0 0 1 41 -1 A7 7 0 0 1 33 7 Z" fill="var(--m-leaf)" />
+    <path d="M31 7 A6 6 0 0 0 24.5 0.5 A6 6 0 0 0 31 7 Z" fill="var(--m-leaf)" />
   </g>
   <path class="m-shape" d="M6 60 V32 C6 15 18 6 32 6 C46 6 58 15 58 32 V60 Z" fill="var(--m-fill)" />
   <ellipse cx="32" cy="52" rx="17" ry="12" fill="#fff" opacity="0.14" />

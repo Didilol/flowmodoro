@@ -90,6 +90,9 @@ pub struct Task {
     pub elapsed_ms: u64,
     #[serde(skip)]
     pub running_since: Option<u64>,
+    /// Paused on purpose (⏸ on the bar). Stays paused across restarts.
+    #[serde(default)]
+    pub paused: bool,
 }
 
 impl Task {
@@ -106,6 +109,12 @@ impl Task {
         if self.running_since.is_none() {
             self.running_since = Some(now_ms());
         }
+    }
+
+    /// ⏸ / ▶ on the bar.
+    pub fn set_paused(&mut self, on: bool) {
+        self.paused = on;
+        if on { self.pause() } else { self.resume() }
     }
 
     /// What gets written to the step log when the step ends.
@@ -125,6 +134,7 @@ impl Task {
             tutorial: self.tutorial.clone(),
             has_queue: !self.queue.is_empty(),
             elapsed_ms: self.elapsed(),
+            paused: self.paused,
         }
     }
 }
@@ -154,7 +164,7 @@ impl Snapshot {
 
     pub fn into_core(self) -> Core {
         let mut task = self.task;
-        if let Some(t) = task.as_mut() {
+        if let Some(t) = task.as_mut().filter(|t| !t.paused) {
             t.resume();
         }
         Core { task, parked: self.parked }
@@ -170,6 +180,7 @@ pub struct TaskView {
     pub tutorial: Option<Tutorial>,
     pub has_queue: bool,
     pub elapsed_ms: u64,
+    pub paused: bool,
 }
 
 #[derive(Clone, Serialize)]

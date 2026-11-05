@@ -1,5 +1,5 @@
 // Injected into the myNoise window before the page runs: keeps only the player,
-// the sliders and the presets, dressed in the Flowmodoro palette. Personal use only.
+// the sliders and the presets, dressed in the Focora palette. Personal use only.
 (() => {
   if (!location.hostname.endsWith("mynoise.net")) return;
 

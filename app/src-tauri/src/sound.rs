@@ -43,7 +43,7 @@ pub fn show(app: &AppHandle) {
 
     let handle = app.clone();
     let built = WebviewWindowBuilder::new(app, "sound", WebviewUrl::External(url))
-        .title("Flowmodoro · Sons")
+        .title("Focora · Sons")
         .inner_size(W, H)
         .min_inner_size(420.0, 480.0)
         .theme(Some(Theme::Dark))

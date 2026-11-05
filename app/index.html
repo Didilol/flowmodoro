@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flowmodoro</title>
+    <title>Focora</title>
     <script type="module" src="/src/bar.ts"></script>
   </head>
 
@@ -19,6 +19,10 @@
           <span class="bar-hint" id="hint" aria-hidden="true"><b id="hintText"></b><span class="key" id="hintKey"></span></span>
         </div>
         <span class="bar-time" id="time" data-tauri-drag-region>0:00</span>
+        <button class="ibtn" id="pauseBtn" data-key="P" aria-label="Pausar o timer">
+          <svg class="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 6v12M15 6v12" /></svg>
+          <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5z" /></svg>
+        </button>
         <button class="ibtn" id="plusBtn" data-hint="Salvei mais uma referência" aria-label="Salvei mais uma referência" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14" /></svg>
         </button>
@@ -33,6 +37,17 @@
         </button>
       </div>
       <div class="track"><div class="fill" id="fill"></div></div>
+    </div>
+    <!-- Circle and minimized timer: only this stays; the bar above opens beside it on hover. -->
+    <div class="dial-wrap" id="dialWrap" hidden>
+      <div class="dial" id="dial" data-tauri-drag-region>
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="dial-track" cx="32" cy="32" r="28" />
+          <circle class="dial-fill" id="dialFill" cx="32" cy="32" r="28" pathLength="100" />
+        </svg>
+        <span class="dial-paused" aria-hidden="true"></span>
+        <span class="dial-time" id="dialTime">0:00</span>
+      </div>
     </div>
     </div>
   </body>

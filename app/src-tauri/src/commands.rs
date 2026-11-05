@@ -99,7 +99,7 @@ pub fn show_home(app: &AppHandle) {
         None => {
             #[cfg_attr(not(target_os = "macos"), allow(unused_mut))]
             let mut builder = WebviewWindowBuilder::new(app, "home", WebviewUrl::App("home.html".into()))
-                .title("Flowmodoro · Visão geral")
+                .title("Focora · Visão geral")
                 .inner_size(HOME_W, HOME_H)
                 .min_inner_size(420.0, 480.0)
                 .center();
@@ -216,6 +216,7 @@ pub fn start_task(
         tutorial,
         elapsed_ms: 0,
         running_since: None,
+        paused: false,
     };
     begin(&db, &mut task, step);
     task.resume();
@@ -307,6 +308,17 @@ pub fn set_step(
     Ok(())
 }
 
+/// ⏸ / ▶ on the bar, or ⌥ P.
+#[tauri::command]
+pub fn toggle_pause(app: AppHandle, st: State<AppState>, db: State<Db>) {
+    let mut core = st.0.lock().unwrap();
+    let Some(task) = core.task.as_mut() else { return };
+    let on = !task.paused;
+    task.set_paused(on);
+    db.event(Some(task.session_id), if on { "pausou" } else { "despausou" }, None);
+    commit(&app, &core, &db);
+}
+
 #[tauri::command]
 pub fn log_event(st: State<AppState>, db: State<Db>, kind: String, detail: Option<String>) {
     let session = st.0.lock().unwrap().task.as_ref().map(|t| t.session_id);
@@ -367,7 +379,7 @@ pub fn resume_parked(app: AppHandle, st: State<AppState>, db: State<Db>) -> Opti
     db.event(Some(task.session_id), "retomou", Some(&task.title));
     let step = task.step.clone();
     begin(&db, &mut task, step);
-    task.resume();
+    task.set_paused(false);
     let view = task.view();
     core.task = Some(task);
     commit(&app, &core, &db);
@@ -540,15 +552,29 @@ pub fn set_bar_solid(solid: State<BarSolid>, rects: Vec<[f64; 4]>) {
 
 // ---------- settings ----------
 
+/// How often a minimized timer shows the time, in minutes.
+pub const PEEK_CHOICES: [u32; 7] = [5, 10, 15, 20, 30, 45, 60];
+pub const TIMER_MODES: [(&str, &str); 3] = [("bar", "Barra"), ("circle", "Círculo"), ("dot", "Minimizado")];
+
 #[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     /// Off saves the little it costs: no drawing, no blinking.
     pub mascot: bool,
+    /// "bar", "circle" (just the time in a circle) or "dot" (no time until it peeks).
+    pub timer: String,
+    pub peek_min: u32,
 }
 
 impl Settings {
     pub fn load(db: &Db) -> Self {
-        Settings { mascot: db.setting("mascot").as_deref() != Some("off") }
+        let timer = db.setting("timer").filter(|t| TIMER_MODES.iter().any(|(id, _)| id == t));
+        let peek_min = db.setting("peek_min").and_then(|m| m.parse().ok()).filter(|m| PEEK_CHOICES.contains(m));
+        Settings {
+            mascot: db.setting("mascot").as_deref() != Some("off"),
+            timer: timer.unwrap_or_else(|| "bar".into()),
+            peek_min: peek_min.unwrap_or(15),
+        }
     }
 }
 
@@ -557,9 +583,9 @@ pub fn get_settings(db: State<Db>) -> Settings {
     Settings::load(&db)
 }
 
-/// From the tray's "Mascote" checkbox.
-pub fn set_mascot(app: &AppHandle, on: bool) {
+/// From the tray menu.
+pub fn save_setting(app: &AppHandle, key: &str, value: &str) {
     let db = app.state::<Db>();
-    db.set_setting("mascot", if on { "on" } else { "off" });
+    db.set_setting(key, value);
     let _ = app.emit("settings", Settings::load(&db));
 }
