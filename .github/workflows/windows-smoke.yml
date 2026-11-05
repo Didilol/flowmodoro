@@ -71,8 +71,12 @@ jobs:
           }
           function Report($label) {
             Write-Host "== $label"
-            AppWindows | ForEach-Object { Write-Host "   $([W]::Describe($_))" }
+            $pids = [System.Collections.Generic.HashSet[uint32]]::new()
+            Get-Process | Where-Object { $_.Path -like "$installDir*" } | ForEach-Object { [void]$pids.Add([uint32]$_.Id) }
+            [W]::Of($pids) | Where-Object { [W]::Title($_) -ne "" -or [W]::IsWindowVisible($_) } |
+              ForEach-Object { Write-Host "   $([W]::Describe($_))" }
           }
+          function BoxVisible() { [bool](AppWindows | Where-Object { [W]::Title($_) -eq "Focora" }) }
 
           $wv = Get-ItemProperty "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" -ErrorAction SilentlyContinue
           Write-Host "WebView2: $(if ($wv) { $wv.pv } else { 'NÃO INSTALADO' })"
@@ -96,8 +100,18 @@ jobs:
           if ($p.HasExited) { throw "o app fechou sozinho (código $($p.ExitCode))" }
           Shot "1-primeira-abertura"
           Report "Janelas na primeira abertura"
+          $firstOpen = BoxVisible
+          Write-Host "Caixa visível na primeira abertura: $firstOpen"
+          if (-not $firstOpen) {
+            # Call it like a user would: the global shortcut.
+            [System.Windows.Forms.SendKeys]::SendWait("^ ")
+            Start-Sleep 3
+            Shot "1b-depois-do-atalho"
+            Report "Janelas depois de Ctrl+Espaço"
+            Write-Host "Caixa visível depois do atalho: $(BoxVisible)"
+          }
           $box = AppWindows | Where-Object { [W]::Title($_) -eq "Focora" } | Select-Object -First 1
-          if (-not $box) { throw "a caixa central (janela 'Focora') não apareceu" }
+          if (-not $box) { throw "a caixa central (janela 'Focora') não apareceu nem pelo atalho" }
 
           # 2. Type a task and a first step into the box.
           Write-Host "Foco na caixa: $([W]::Focus($box))"
