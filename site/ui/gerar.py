@@ -93,6 +93,7 @@ SCREENS = [
 ]
 
 MENU_CSS = """
+:root { color-scheme: light dark; }
 .menu { font: 14px/1.2 -apple-system, "Segoe UI", system-ui, sans-serif; width: 290px; margin: 8px;
   background: rgb(246 247 247 / 0.96); color: #1d1f1f; border: 1px solid rgb(0 0 0 / 0.12);
   border-radius: 10px; padding: 5px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.22); }
