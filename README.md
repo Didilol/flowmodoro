@@ -15,6 +15,11 @@ Grátis para Mac e Windows · sem cadastro · seus dados ficam no seu computador
 
 <p align="center"><img src="site/assets/ui/barra.svg" alt="A barra do Focora com o passo atual, o timer e o mascote espiando" width="440"></p>
 
+> [!NOTE]
+> **Feito por uma pessoa com TDAH, para as próprias necessidades.** Eu não tenho formação na área clínica nem em saúde: as funcionalidades nasceram da minha experiência, do que funcionou para mim. Decidi disponibilizar o Focora porque ele pode ajudar outras pessoas. **Ele não substitui acompanhamento profissional.** Se você tem ou suspeita ter TDAH, procure um médico, psiquiatra ou psicólogo.
+>
+> Sugestões são bem-vindas: [diogenes.edc@gmail.com](mailto:diogenes.edc@gmail.com).
+
 ## O que é
 
 O Focora é uma barra pequena que fica por cima de qualquer programa e mostra **só o passo atual** da sua tarefa. Ele foi feito por uma pessoa com TDAH para quem trava diante de listas longas e de planejamento.
@@ -110,6 +115,10 @@ Precisa de Node e Rust ([rustup](https://rustup.rs)). Pastas:
    O `CI=true` pula a etapa em que o Finder arruma a janela do `.dmg`, que pode travar esperando permissão.
 3. Crie a release com o `.dmg`, o `Focora.app.tar.gz` e um `latest.json` com a entrada `darwin-aarch64`.
 4. **Windows:** envie a tag (`git push origin vX.Y.Z`) ou rode *Actions → Windows → Run workflow*. O workflow anexa os instaladores e acrescenta a entrada `windows-x86_64` ao `latest.json`. Ele usa os secrets `TAURI_SIGNING_PRIVATE_KEY` e `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
+## Sugestões
+
+Ideias, problemas ou sugestões: mande um e-mail para [diogenes.edc@gmail.com](mailto:diogenes.edc@gmail.com).
 
 ## Licença
 
