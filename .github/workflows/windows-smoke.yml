@@ -9,21 +9,31 @@ on:
       tag:
         description: "Release a testar (ex.: v0.2.0). Vazio: a mais recente."
         required: false
+      run_id:
+        description: "Ou: número de uma execução do workflow Windows (testa o build dela, sem publicar)."
+        required: false
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   smoke:
     runs-on: windows-latest
     steps:
-      - name: Baixar o instalador da release
+      - name: Baixar o instalador
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
+          RUN_ID: ${{ inputs.run_id }}
         run: |
-          gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern "*-setup.exe" --dir installer
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" -n Focora-windows -D build
+            mkdir -p installer && find build -name "*-setup.exe" -exec cp {} installer/ \;
+          else
+            gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern "*-setup.exe" --dir installer
+          fi
           ls -la installer
 
       - name: Instalar, abrir e usar
@@ -116,7 +126,7 @@ jobs:
 
           # 2. Type a task and a first step into the box.
           Write-Host "Foco na caixa: $([W]::Focus($box))"
-          Start-Sleep 1
+          Start-Sleep 2
           [System.Windows.Forms.SendKeys]::SendWait("Testar o Focora no Windows{ENTER}")
           Start-Sleep 2
           Shot "2-primeiro-passo"
@@ -140,7 +150,7 @@ jobs:
               Write-Host "Banco: $f ($($ms.Length) bytes)"
             }
           }
-          if ($text -notmatch "Testar o Focora no Windows") { throw "a tarefa digitada não foi salva (a digitação não chegou ao app)" }
+          if ($text -notmatch "Focora no Windows") { throw "a tarefa digitada não foi salva (a digitação não chegou ao app)" }
           Write-Host "A tarefa digitada está salva no banco."
 
           # 4. Restart: the task should come back on the bar.

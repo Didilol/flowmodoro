@@ -5,7 +5,7 @@ mod sound;
 mod state;
 mod update;
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time::Duration};
 
@@ -286,12 +286,22 @@ pub fn run() {
             // Like Spotlight: clicking anywhere else closes the box.
             // Only once it actually had focus, or it would vanish if macOS refuses to activate us.
             let entry_handle = entry.clone();
-            let had_focus = AtomicBool::new(false);
+            let had_focus = Arc::new(AtomicBool::new(false));
             entry.on_window_event(move |event| match event {
                 WindowEvent::Focused(true) => had_focus.store(true, Ordering::Relaxed),
                 WindowEvent::Focused(false) => {
                     if had_focus.swap(false, Ordering::Relaxed) {
-                        let _ = entry_handle.hide();
+                        // On Windows the page inside the box taking focus (right after the first
+                        // launch) also reports a focus loss; hide only if another window took over.
+                        let (w, had_focus) = (entry_handle.clone(), had_focus.clone());
+                        thread::spawn(move || {
+                            thread::sleep(Duration::from_millis(150));
+                            if w.is_focused().unwrap_or(false) {
+                                had_focus.store(true, Ordering::Relaxed);
+                            } else {
+                                let _ = w.hide();
+                            }
+                        });
                     }
                 }
                 _ => {}
