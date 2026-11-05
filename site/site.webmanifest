@@ -1,0 +1,26 @@
+{
+  "name": "Focora",
+  "short_name": "Focora",
+  "description": "Âncora de foco para TDAH",
+  "theme_color": "#1C2524",
+  "background_color": "#F3F6F5",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,1 +1,7 @@
 .DS_Store
+
+# Só o código do app vai para o git. Design, protótipos e documentos ficam locais.
+identidade/
+prototipo/
+IDENTIDADE-VISUAL-BRIEFING.md
+MASCOTE-ANIMACAO.md

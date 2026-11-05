@@ -1,13 +1,17 @@
 # Builds the Windows installers on a Windows machine at GitHub and attaches them
-# to the matching release. Runs on a pushed tag like v0.1.0, or by hand
+# to the matching release. Runs on a pushed tag like v0.2.0, or by hand
 # (Actions → Windows → Run workflow) with the tag of an existing release.
+#
+# The installers are signed for the auto-updater with the secrets
+# TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD, and the
+# Windows entry is merged into the release's latest.json (the Mac build adds its own).
 name: Windows
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release onde anexar os instaladores (ex.: v0.1.0). Vazio: só gera os artifacts."
+        description: "Release onde anexar os instaladores (ex.: v0.2.0). Vazio: só gera os artifacts."
         required: false
   push:
     tags: ["v*"]
@@ -39,12 +43,16 @@ jobs:
       - run: npm ci
 
       - run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Flowmodoro-windows
+          name: Focora-windows
           path: |
             app/src-tauri/target/release/bundle/nsis/*.exe
+            app/src-tauri/target/release/bundle/nsis/*.exe.sig
             app/src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
 
@@ -55,5 +63,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Flowmodoro $TAG" --notes ""
-          gh release upload "$TAG" src-tauri/target/release/bundle/nsis/*.exe src-tauri/target/release/bundle/msi/*.msi --clobber
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Focora $TAG" --notes ""
+          gh release upload "$TAG" src-tauri/target/release/bundle/nsis/*.exe src-tauri/target/release/bundle/nsis/*.exe.sig src-tauri/target/release/bundle/msi/*.msi --clobber
+
+      - name: Atualizar latest.json (auto-update)
+        if: github.ref_type == 'tag' || inputs.tag != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
+        run: |
+          gh release download "$TAG" --pattern latest.json --dir . --clobber || echo '{}' > latest.json
+          EXE=$(ls src-tauri/target/release/bundle/nsis/*-setup.exe | head -n1)
+          node -e '
+            const fs = require("fs");
+            const [tag, exe, repo] = process.argv.slice(1);
+            const j = JSON.parse(fs.readFileSync("latest.json", "utf8") || "{}");
+            const name = require("path").basename(exe);
+            j.version = j.version || tag.replace(/^v/, "");
+            j.notes = j.notes || "";
+            j.pub_date = j.pub_date || new Date().toISOString();
+            j.platforms = j.platforms || {};
+            j.platforms["windows-x86_64"] = {
+              signature: fs.readFileSync(exe + ".sig", "utf8").trim(),
+              url: `https://github.com/${repo}/releases/download/${tag}/${name}`,
+            };
+            fs.writeFileSync("latest.json", JSON.stringify(j, null, 2));
+          ' "$TAG" "$EXE" "$GITHUB_REPOSITORY"
+          gh release upload "$TAG" latest.json --clobber

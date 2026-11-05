@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="310" height="230" viewBox="0 0 310 230"><style>
+.menu { font: 14px/1.2 -apple-system, "Segoe UI", system-ui, sans-serif; width: 290px; margin: 8px;
+  background: rgb(246 247 247 / 0.96); color: #1d1f1f; border: 1px solid rgb(0 0 0 / 0.12);
+  border-radius: 10px; padding: 5px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.22); }
+.menu div { display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 5px; }
+.menu div:first-child { background: #2b776f; color: #fff; }
+.menu hr { border: 0; border-top: 1px solid rgb(0 0 0 / 0.1); margin: 5px 8px; }
+.menu .k { color: rgb(0 0 0 / 0.45); }
+.menu div:first-child .k { color: rgb(255 255 255 / 0.8); }
+@media (prefers-color-scheme: dark) {
+  .menu { background: rgb(40 44 44 / 0.96); color: #eef1f0; border-color: rgb(255 255 255 / 0.12); }
+  .menu hr { border-top-color: rgb(255 255 255 / 0.12); } .menu .k { color: rgb(255 255 255 / 0.5); }
+}
+.ui-root{font-family:var(--f-body);font-size:15px;line-height:1.5;color:var(--ink);-webkit-font-smoothing:antialiased}.ui-root .bar-step{position:static}</style><foreignObject x="0" y="0" width="310" height="230"><div xmlns="http://www.w3.org/1999/xhtml" class="ui-root" style="width:310px;height:230px"><div class="menu"><div><span>Abrir caixa</span><span class="k">⌥ Espaço</span></div><div><span>Visão geral do dia</span><span class="k">⌥ H</span></div><div><span>Sons</span><span class="k">⌥ S</span></div><div><span>✓ Mascote</span><span></span></div><div><span>Timer</span><span class="k">▸</span></div><hr/><div><span>Sair do Focora</span><span></span></div></div></div></foreignObject></svg>
