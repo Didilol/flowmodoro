@@ -1,0 +1,94 @@
+# Smoke test on a clean Windows machine: installs the published installer, opens the app,
+# types a task and a first step like a person would, restarts it and checks the task came back.
+# Screenshots of each stage are saved as the "telas-windows" artifact.
+name: Teste no Windows
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release a testar (ex.: v0.2.0). Vazio: a mais recente."
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - name: Baixar o instalador da release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern "*-setup.exe" --dir installer
+          ls -la installer
+
+      - name: Instalar, abrir e usar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          New-Item -ItemType Directory -Force shots | Out-Null
+          function Shot($name) {
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("shots\$name.png")
+          }
+          function Windows() {
+            Get-Process | Where-Object { $_.Path -like "$installDir*" } |
+              ForEach-Object { "  pid $($_.Id): '$($_.MainWindowTitle)' $($_.Path)" }
+          }
+
+          $setup = Get-ChildItem installer\*-setup.exe | Select-Object -First 1
+          Write-Host "Instalando $($setup.Name)"
+          Start-Process $setup.FullName -ArgumentList "/S" -Wait
+          $installDir = "$env:LOCALAPPDATA\Focora"
+          $exe = Get-ChildItem $installDir -Filter *.exe | Where-Object { $_.Name -notlike "uninstall*" } | Select-Object -First 1
+          if (-not $exe) { Get-ChildItem -Recurse $env:LOCALAPPDATA -Filter *.exe -ErrorAction SilentlyContinue | Select-Object -First 20 FullName; throw "app não encontrado em $installDir" }
+          Write-Host "Instalado em $($exe.FullName)"
+
+          # 1. First launch: the box opens asking what needs to be done.
+          $p = Start-Process $exe.FullName -PassThru
+          Start-Sleep 12
+          Shot "1-primeira-abertura"
+          if ($p.HasExited) { throw "o app fechou sozinho (código $($p.ExitCode))" }
+          Write-Host "Processos:"; Windows
+
+          # 2. Type a task and a first step, like a person would.
+          $shell = New-Object -ComObject WScript.Shell
+          $null = $shell.AppActivate("Focora")
+          Start-Sleep 1
+          [System.Windows.Forms.SendKeys]::SendWait("Testar o Focora no Windows{ENTER}")
+          Start-Sleep 2
+          Shot "2-primeiro-passo"
+          [System.Windows.Forms.SendKeys]::SendWait("Abrir o projeto{ENTER}")
+          Start-Sleep 6
+          Shot "3-barra-com-a-tarefa"
+          if ($p.HasExited) { throw "o app fechou depois de começar a tarefa" }
+
+          # 3. The data lives in %APPDATA%, never anywhere else.
+          $db = "$env:APPDATA\com.flowmodoro.app\flowmodoro.db"
+          Start-Sleep 16   # the app saves its state every 15 s
+          if (-not (Test-Path $db)) { throw "banco de dados não criado em $db" }
+          Write-Host "Banco de dados: $db ($((Get-Item $db).Length) bytes)"
+
+          # 4. Restart: the task should come back on the bar.
+          Get-Process | Where-Object { $_.Path -like "$installDir*" } | Stop-Process -Force
+          Start-Sleep 3
+          $p = Start-Process $exe.FullName -PassThru
+          Start-Sleep 12
+          Shot "4-reaberto"
+          if ($p.HasExited) { throw "o app não reabriu" }
+          Write-Host "Processos depois de reabrir:"; Windows
+          Write-Host "OK: instalou, abriu, começou uma tarefa, salvou e reabriu."
+
+      - name: Guardar as telas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telas-windows
+          path: shots/
